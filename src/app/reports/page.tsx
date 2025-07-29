@@ -71,7 +71,7 @@ interface EmployeesResponse {
   employees: ApiEmployee[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_URL = "https://qrbackend-doo3.onrender.com";
 
 export default function ReportsPage() {
   const [filters, setFilters] = useState<ReportFilters>({
@@ -204,6 +204,7 @@ export default function ReportsPage() {
       setError(null);
 
       const token = localStorage.getItem("auth_token");
+      
       const queryParams = new URLSearchParams({
         employee_id: filters.employee_id.toString(),
         start_date: filters.start_date,
@@ -263,21 +264,29 @@ export default function ReportsPage() {
         return;
     }
 
+    // Convert to Seoul timezone (UTC+9) like attendance page
+    const seoulStartDate = new Date(startDate.getTime() + 9 * 60 * 60 * 1000);
+    const seoulEndDate = new Date(endDate.getTime() + 9 * 60 * 60 * 1000);
+
     setFilters((prev) => ({
       ...prev,
       date_range: range as "day" | "week" | "month" | "custom",
-      start_date: format(startDate, "yyyy-MM-dd"),
-      end_date: format(endDate, "yyyy-MM-dd"),
+      start_date: seoulStartDate.toISOString().split("T")[0],
+      end_date: seoulEndDate.toISOString().split("T")[0],
     }));
   };
 
   const handleCustomDateRange = () => {
     if (customStartDate && customEndDate) {
+      // Convert to Seoul timezone (UTC+9)
+      const seoulStartDate = new Date(customStartDate.getTime() + 9 * 60 * 60 * 1000);
+      const seoulEndDate = new Date(customEndDate.getTime() + 9 * 60 * 60 * 1000);
+
       setFilters((prev) => ({
         ...prev,
         date_range: "custom",
-        start_date: format(customStartDate, "yyyy-MM-dd"),
-        end_date: format(customEndDate, "yyyy-MM-dd"),
+        start_date: seoulStartDate.toISOString().split("T")[0],
+        end_date: seoulEndDate.toISOString().split("T")[0],
       }));
     }
   };
