@@ -311,10 +311,7 @@ export default function ReportsPage() {
   };
 
   const formatTime = (dateString: string) => {
-    // Convert UTC to Seoul timezone (KST, UTC+9)
-    const utcDate = new Date(dateString);
-    const seoulDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
-    return format(seoulDate, "HH:mm");
+    return format(new Date(dateString), "HH:mm");
   };
 
   const handleExportReport = async () => {
@@ -678,7 +675,7 @@ export default function ReportsPage() {
                         {reportData.map((day, index) => (
                           <TableRow key={`${day.date}-${index}`}>
                             <TableCell className="font-medium">
-                              {format(new Date(day.date), "MMM dd, yyyy")}
+                              {day.clock_in ? format(new Date(day.clock_in), "MMM dd, yyyy") : format(new Date(day.date), "MMM dd, yyyy")}
                             </TableCell>
                             <TableCell>
                               {day.clock_in ? formatTime(day.clock_in) : "-"}

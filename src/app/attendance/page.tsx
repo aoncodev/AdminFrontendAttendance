@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Edit, Coffee, Utensils, Wifi } from "lucide-react";
+import { CalendarIcon, Edit, Coffee, Utensils, Wifi, Home, Heart, HandHeart } from "lucide-react";
 import { EditAttendanceDialog } from "@/components/edit-attendance-dialog";
 import { AuthGuard } from "@/components/auth-guard";
 
@@ -136,6 +136,10 @@ export default function AttendancePage() {
     switch (breakType.toLowerCase()) {
       case "eating":
         return <Utensils className="h-4 w-4" />;
+      case "praying":
+        return <HandHeart className="h-4 w-4" />;
+      case "restroom":
+        return <Home className="h-4 w-4" />;
       case "coffee":
         return <Coffee className="h-4 w-4" />;
       case "break":
