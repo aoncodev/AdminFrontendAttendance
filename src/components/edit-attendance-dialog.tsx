@@ -27,8 +27,8 @@ import { Trash2, Plus } from "lucide-react";
 // New interface matching your API response
 interface Break {
   break_type: string;
-  duration_minutes: number;
-  end: string;
+  duration_minutes: number | null;
+  end: string | null;
   start: string;
 }
 
@@ -116,9 +116,9 @@ export function EditAttendanceDialog({
   const addBreak = () => {
     const newBreak: Break = {
       break_type: "eating",
-      duration_minutes: 0,
+      duration_minutes: null,
       start: new Date().toISOString(),
-      end: new Date().toISOString(),
+      end: null,
     };
     setBreaks([...breaks, newBreak]);
   };
@@ -205,7 +205,7 @@ export function EditAttendanceDialog({
 
   const calculateBreakDuration = (breakItem: Break) => {
     const start = new Date(breakItem.start);
-    const end = new Date(breakItem.end);
+    const end = breakItem.end ? new Date(breakItem.end) : new Date();
     const diff = end.getTime() - start.getTime();
     const minutes = Math.round(diff / (1000 * 60));
     return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
