@@ -59,7 +59,7 @@ export function LogoutButton() {
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to log out? You'll need to sign in again to
+            Are you sure you want to log out? You&apos;ll need to sign in again to
             access the dashboard.
           </AlertDialogDescription>
         </AlertDialogHeader>

@@ -1,41 +1,43 @@
 "use client";
 
-import type React from "react";
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import { CalendarIcon, Edit } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Edit, Coffee, Utensils, Wifi } from "lucide-react";
 import { EditAttendanceDialog } from "@/components/edit-attendance-dialog";
-import type { AttendanceWithEmployee } from "@/types/attendance";
 import { AuthGuard } from "@/components/auth-guard";
+
+interface AttendanceRecord {
+  attendance_id: string;
+  break_time: number;
+  breaks: Array<{
+    break_type: string;
+    duration_minutes: number | null;
+    end: string | null;
+    start: string;
+  }> | null;
+  clock_in: string | null;
+  clock_out: string | null;
+  employee: string;
+  status: string;
+  total_hours: number;
+}
 
 export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]); // Use any[] for API response
-  const [editingAttendance, setEditingAttendance] = useState<any | null>(null);
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingAttendance, setEditingAttendance] = useState<AttendanceRecord | null>(null);
 
-  // Debug log for attendanceLogs changes
+  // Debug log for attendance logs updates
   useEffect(() => {
     console.log('Attendance logs updated:', attendanceLogs);
   }, [attendanceLogs]);
@@ -68,11 +70,11 @@ export default function AttendancePage() {
         }
         return res.json();
       })
-      .then((data) => {
+      .then((data: AttendanceRecord[]) => {
         console.log('Raw API data:', data);
         console.log('Data length:', data?.length || 0);
         // Show employees who are present, on break, or have any attendance record
-        const activeEmployees = data.filter((item: any) => 
+        const activeEmployees = data.filter((item: AttendanceRecord) => 
           item.status === "present" || 
           item.status === "on_break" || 
           item.clock_in !== null
@@ -86,7 +88,7 @@ export default function AttendancePage() {
       });
   }, [selectedDate]);
 
-  const handleEditAttendance = (attendance: any) => {
+  const handleEditAttendance = (attendance: AttendanceRecord) => {
     setEditingAttendance(attendance);
     setIsEditDialogOpen(true);
   };
@@ -104,9 +106,14 @@ export default function AttendancePage() {
       },
     })
       .then((res) => res.json())
-      .then((data) => {
-        // Only keep present employees
-        setAttendanceLogs(data.filter((item: any) => item.status === "present"));
+      .then((data: AttendanceRecord[]) => {
+        // Show employees who are present, on break, or have any attendance record
+        const activeEmployees = data.filter((item: AttendanceRecord) => 
+          item.status === "present" || 
+          item.status === "on_break" || 
+          item.clock_in !== null
+        );
+        setAttendanceLogs(activeEmployees);
       })
       .catch((error) => {
         console.error('Error refreshing attendance data:', error);
@@ -124,35 +131,16 @@ export default function AttendancePage() {
     return `${h}h ${m}m`;
   };
 
-  const calculateWorkingHours = (clockIn: string, clockOut: string | null) => {
-    const start = new Date(clockIn);
-    const end = clockOut ? new Date(clockOut) : new Date();
-    const diff = end.getTime() - start.getTime();
-    return diff / (1000 * 60 * 60); // Convert to hours
-  };
-
-  const calculateTotalBreakTime = (breaks: any[]) => {
-    return breaks.reduce((total, breakLog) => {
-      if (breakLog.break_end) {
-        const start = new Date(breakLog.break_start);
-        const end = new Date(breakLog.break_end);
-        const diff = end.getTime() - start.getTime();
-        return total + diff / (1000 * 60 * 60); // Convert to hours
-      }
-      return total;
-    }, 0);
-  };
-
   const getBreakTypeIcon = (breakType: string) => {
-    switch (breakType) {
+    switch (breakType.toLowerCase()) {
       case "eating":
-        return "🍽️";
-      case "restroom":
-        return "🚻";
-      case "praying":
-        return "🙏";
+        return <Utensils className="h-4 w-4" />;
+      case "coffee":
+        return <Coffee className="h-4 w-4" />;
+      case "break":
+        return <Coffee className="h-4 w-4" />;
       default:
-        return "⏸️";
+        return <Wifi className="h-4 w-4" />;
     }
   };
 
@@ -181,9 +169,7 @@ export default function AttendancePage() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-[240px] justify-start text-left font-normal"
-                    )}
+                    className="w-[240px] justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? (
@@ -256,7 +242,7 @@ export default function AttendancePage() {
                             <TableCell>
                               <div className="flex gap-1 flex-wrap">
                                 {log.breaks && log.breaks.length > 0 ? (
-                                  log.breaks.map((breakLog: any, i: number) => (
+                                  log.breaks.map((breakLog, i) => (
                                     <span key={i} title={`${breakLog.break_type} break`}>
                                       {getBreakTypeIcon(breakLog.break_type)}
                                     </span>

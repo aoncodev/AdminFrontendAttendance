@@ -161,6 +161,8 @@ export default function ReportsPage() {
     }
   }, [filters]);
 
+
+
   const fetchEmployees = async () => {
     try {
       setIsLoadingEmployees(true);
@@ -263,7 +265,7 @@ export default function ReportsPage() {
 
     setFilters((prev) => ({
       ...prev,
-      date_range: range as any,
+      date_range: range as "day" | "week" | "month" | "custom",
       start_date: format(startDate, "yyyy-MM-dd"),
       end_date: format(endDate, "yyyy-MM-dd"),
     }));
