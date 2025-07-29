@@ -311,7 +311,10 @@ export default function ReportsPage() {
   };
 
   const formatTime = (dateString: string) => {
-    return format(new Date(dateString), "HH:mm");
+    // Convert UTC to Seoul timezone (KST, UTC+9)
+    const utcDate = new Date(dateString);
+    const seoulDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+    return format(seoulDate, "HH:mm");
   };
 
   const handleExportReport = async () => {
