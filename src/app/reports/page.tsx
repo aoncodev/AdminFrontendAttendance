@@ -84,6 +84,8 @@ export default function ReportsPage() {
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
 
+
+
   // State for API data
   const [employees, setEmployees] = useState<ApiEmployee[]>([]);
   const [reportData, setReportData] = useState<EmployeeReport[]>([]);
@@ -228,12 +230,21 @@ export default function ReportsPage() {
 
       const result: EmployeeReport[] = await response.json();
 
-      // Set report data directly since API returns array
-      setReportData(result);
-
-      // Find and set selected employee
+      // Find selected employee to get start_time
       const employee = employees.find((emp) => emp.id === filters.employee_id);
       setSelectedEmployee(employee || null);
+
+      // Process report data to calculate late minutes
+      const processedData = result.map(day => {
+        const lateMinutes = calculateLateMinutes(day.clock_in || '', employee?.start_time || '');
+        return {
+          ...day,
+          late_minutes: lateMinutes,
+          is_late: lateMinutes > 0
+        };
+      });
+
+      setReportData(processedData);
     } catch (err) {
       console.error("Error fetching report data:", err);
       setError("Failed to load report data. Please try again.");
@@ -244,6 +255,17 @@ export default function ReportsPage() {
   };
 
   const handleDateRangeChange = (range: string) => {
+    console.log('Date range changed to:', range);
+    
+    if (range === "custom") {
+      // For custom range, just update the date_range without changing dates
+      setFilters((prev) => ({
+        ...prev,
+        date_range: "custom",
+      }));
+      return;
+    }
+
     const today = new Date();
     let startDate: Date;
     let endDate: Date = today;
@@ -277,17 +299,66 @@ export default function ReportsPage() {
   };
 
   const handleCustomDateRange = () => {
+    console.log('Applying custom date range:', { customStartDate, customEndDate });
+    
     if (customStartDate && customEndDate) {
       // Convert to Seoul timezone (UTC+9)
       const seoulStartDate = new Date(customStartDate.getTime() + 9 * 60 * 60 * 1000);
       const seoulEndDate = new Date(customEndDate.getTime() + 9 * 60 * 60 * 1000);
 
+      const newStartDate = seoulStartDate.toISOString().split("T")[0];
+      const newEndDate = seoulEndDate.toISOString().split("T")[0];
+
+      console.log('Setting filters with dates:', { newStartDate, newEndDate });
+
       setFilters((prev) => ({
         ...prev,
         date_range: "custom",
-        start_date: seoulStartDate.toISOString().split("T")[0],
-        end_date: seoulEndDate.toISOString().split("T")[0],
+        start_date: newStartDate,
+        end_date: newEndDate,
       }));
+    } else {
+      console.log('Missing custom dates:', { customStartDate, customEndDate });
+    }
+  };
+
+  // Calculate late minutes by comparing clock_in time with employee's start_time
+  const calculateLateMinutes = (clockInTime: string, employeeStartTime: string): number => {
+    if (!clockInTime || !employeeStartTime) return 0;
+    
+    try {
+      // Parse clock_in time (from API, already in local time)
+      const clockInDate = new Date(clockInTime);
+      const clockInHours = clockInDate.getHours();
+      const clockInMinutes = clockInDate.getMinutes();
+      
+      // Parse employee start_time (format: "HH:MM")
+      const [startHour, startMinute] = employeeStartTime.split(':').map(Number);
+      
+      // Calculate total minutes
+      const clockInTotalMinutes = clockInHours * 60 + clockInMinutes;
+      const startTotalMinutes = startHour * 60 + startMinute;
+      
+      // Calculate difference (positive = late, negative = early)
+      const lateMinutes = clockInTotalMinutes - startTotalMinutes;
+      
+      // Debug log
+      console.log('Late calculation:', {
+        clockInTime,
+        employeeStartTime,
+        clockInHours,
+        clockInMinutes,
+        startHour,
+        startMinute,
+        clockInTotalMinutes,
+        startTotalMinutes,
+        lateMinutes
+      });
+      
+      return lateMinutes > 0 ? lateMinutes : 0;
+    } catch (error) {
+      console.error('Error calculating late minutes:', error);
+      return 0;
     }
   };
 
@@ -524,13 +595,18 @@ export default function ReportsPage() {
                 </div>
 
                 {filters.date_range === "custom" && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex gap-2">
                     <Button
                       onClick={handleCustomDateRange}
                       disabled={!customStartDate || !customEndDate}
                     >
                       Apply Custom Range
                     </Button>
+                    {customStartDate && customEndDate && (
+                      <span className="text-sm text-muted-foreground self-center">
+                        {format(customStartDate, "MMM dd, yyyy")} - {format(customEndDate, "MMM dd, yyyy")}
+                      </span>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -622,6 +698,11 @@ export default function ReportsPage() {
                         : 0}
                       % of days
                     </p>
+                    {selectedEmployee?.start_time && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Expected start: {selectedEmployee.start_time}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -719,16 +800,22 @@ export default function ReportsPage() {
                               {formatCurrency(day.total_wage)}
                             </TableCell>
                             <TableCell>
-                              {day.is_late ? (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
-                                  {day.late_minutes}m late
-                                </Badge>
+                              {day.clock_in ? (
+                                day.is_late ? (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs"
+                                  >
+                                    {day.late_minutes}m late
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    On time
+                                  </Badge>
+                                )
                               ) : (
-                                <Badge variant="secondary" className="text-xs">
-                                  On time
+                                <Badge variant="outline" className="text-xs">
+                                  No clock in
                                 </Badge>
                               )}
                             </TableCell>
